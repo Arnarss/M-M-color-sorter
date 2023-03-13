@@ -1,0 +1,173 @@
+#include <Servo.h>
+#include <Wire.h>
+#include "Adafruit_TCS34725.h"
+#include <AccelStepper.h>
+
+#define HALFSTEP 8
+#define stepperPin1  2
+#define stepperPin2  3
+#define stepperPin3  4
+#define stepperPin4  5
+
+int limitSwitch = 8;
+int takki = 10;
+
+int position1 = 55;
+int position2 = 545;
+int position3 = 960;
+int position4 = 1380;
+int position5 = 1780;
+int position6 = 2190;
+int position7 = 2730;
+
+int demoDelay = 1500;
+int state = HIGH;
+int reading;
+int previous = LOW;
+int OnOff = 0;
+int color = 0;
+long time = 0;
+long debounce = 200;
+Servo myservo;
+
+AccelStepper stepper(HALFSTEP, stepperPin1, stepperPin3, stepperPin2, stepperPin4);
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
+
+void setup() {
+  
+    Serial.begin(9600);
+    myservo.attach(9);
+    pinMode(takki, INPUT);  
+    if (tcs.begin()) {
+    Serial.println("Found sensor");
+  
+  } else {
+    Serial.println("No sensor!");
+    while (1);
+  }
+  
+    pinMode(limitSwitch, INPUT);
+    stepper.setMaxSpeed(300);
+    stepper.setAcceleration(100);
+    stepper.setSpeed(300);
+    stepper.moveTo(-4096);
+    while (digitalRead(limitSwitch)) {
+      stepper.run();
+    }
+    stepper.setCurrentPosition(0);
+    stepper.setMaxSpeed(1000);
+    stepper.setAcceleration(100);
+    stepper.setSpeed(1000);
+    stepper.moveTo(4096);
+}
+
+
+  
+
+
+void loop() {
+     
+  reading = digitalRead(takki);
+  if (reading == HIGH && previous == LOW && millis() - time > debounce) {
+    if (state == HIGH) {
+      state = LOW;
+      Serial.print("ON\n");
+      OnOff = 1;
+
+    }
+    else {
+      state = HIGH;
+      Serial.print("OFF\n");
+      OnOff = 0;
+    }
+    time = millis();    
+  }
+  previous = reading;
+
+while (OnOff == 1) {
+  
+  
+    myservo.write(160); // Byrjunarstaða
+    delay(1000);
+    
+    myservo.write(80); // Skynjarastaða
+    delay(1000);
+    uint16_t clear, red, green, blue;
+    tcs.setInterrupt(false);      // turn on LED
+    delay(60);  // takes 50ms to read 
+    tcs.getRawData(&red, &green, &blue, &clear);
+    tcs.setInterrupt(true);  // turn off LED  
+    Serial.print("\nC:\t"); Serial.print(clear);
+    Serial.print("\tR:\t"); Serial.print(red);
+    Serial.print("\tG:\t"); Serial.print(green);
+    Serial.print("\tB:\t"); Serial.println(blue);
+    delay(1000);
+
+    if (clear >= 230 & clear <= 300 & red >= 70 & red <= 120 & green >= 90 & green <= 140 & blue >= 40 & blue <= 80) {
+      color = 1;
+      Serial.print("\tColor: Green\t");
+      while (stepper.currentPosition() != position2) {
+      stepper.moveTo(position2);
+      stepper.run();
+      }
+      myservo.write(0);
+    }
+    if (clear >= 170 & red >= 40 & red <= 100 & green >= 60 & green <= 100 & blue >= 50 & blue <= 100) {
+      color = 1;
+      Serial.print("\tColor: Blue\t");
+      while (stepper.currentPosition() != position3) {
+      stepper.moveTo(position3);
+      stepper.run();
+      }
+      myservo.write(0);
+    }
+    if (clear >= 170 & clear <= 280 & red >= 120 & red <= 170 & green >= 45 & green <= 70 & blue >= 30 & blue <= 60) {
+      color = 1;
+      Serial.print("\tColor: Red\t");
+      while (stepper.currentPosition() != position4) {
+      stepper.moveTo(position4);
+      stepper.run();
+      }
+      myservo.write(0);
+    }
+    if (clear >= 400 & red >= 230 & green >= 120 & blue <= 100) {
+      color = 1;
+      Serial.print("\tColor: Yellow\t");
+      while (stepper.currentPosition() != position5) {
+      stepper.moveTo(position5);
+      stepper.run();
+      }
+      myservo.write(0);
+    }
+    if (clear >= 140 & clear <= 200 & red >= 60 & red <= 100 & green >= 40 & green <= 80 & blue <= 60) {
+      color = 1;
+      Serial.print("\tColor: Brown\t");
+      while (stepper.currentPosition() != position6) {
+      stepper.moveTo(position6);
+      stepper.run();
+      }
+      myservo.write(0);
+    }
+    if (clear >= 300 & clear <= 400 & red >= 150 & red <= 280 & green >= 80 & green <= 120 & blue >= 30 & blue <= 100) {
+      color = 1;
+      Serial.print("\tColor: Orange\t");
+      while (stepper.currentPosition() != position7) {
+      stepper.moveTo(position7);
+      stepper.run();
+      }
+      myservo.write(0);
+    }
+    else if (color == 0) {
+      Serial.print("\nColor : Failure\t");
+      while (stepper.currentPosition() != position1) {
+      stepper.moveTo(position1);
+      stepper.run();
+    }
+    myservo.write(0);
+    }
+    
+    delay(2000);
+    color = 0;
+  
+}
+}
